@@ -1,0 +1,18 @@
+{% extends 'bacterial_genome_annotation/Base.html' %}
+{% block content %}
+    <body>
+    <div class="backgroundPage">
+        <div class="addAlign">
+            <form action="" method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                {{ form.as_p }}
+                <input class="btn btn-secondary" type="submit" value="Envoyer">
+            </form>
+
+        </div>
+    </div>
+
+
+    </body>
+
+{% endblock %}

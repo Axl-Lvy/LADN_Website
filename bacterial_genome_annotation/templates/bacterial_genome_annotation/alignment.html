@@ -1,0 +1,118 @@
+{% extends 'bacterial_genome_annotation/Base.html' %}
+{% load mytags %}
+{% block content %}
+
+    <table>
+        <thead>
+        <th colspan="6">
+            {{ blast.accession }}
+        </th>
+        </thead>
+        <tbody>
+        <tr>
+            <td colspan="6">
+                {{ blast.definition }}
+            </td>
+        </tr>
+        <tr>
+            <td class="col41">
+                <b>sequence length :</b>
+            </td>
+            <td class="col42">
+                <b>evalue : </b>
+            </td>
+            <td class="col43">
+                <b>identitie:</b>
+            </td>
+            <td class="col44">
+                <b>align length</b>
+            </td>
+            <td class="col45">
+                <b>score</b>
+            </td>
+            <td class="col46">
+                <b>gaps</b>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                {{ blast.len }}
+            </td>
+            <td>
+                {{ blast.value }}
+            </td>
+            <td>
+                {{ blast.identitie }} % <!-- pourcentage d'identité-->
+            </td>
+            <td>
+                {{ blast.align_length }} <!-- taulle de la séquence -->
+            </td>
+            <td>
+                {{ blast.score}}
+            </td>
+            <td>
+                {{ blast.gaps}}
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <br>
+    <br>
+
+    <table>
+        <thead>
+        <th colspan="4">
+            Sequence
+        </th>
+        </thead>
+
+        <tbody>
+        
+        <tr>
+            <td>
+                <b>Query Start</b>
+            </td>
+            <td>
+                <b>Query End</b>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                {{ blast.query_start }}
+            </td>
+            <td>
+                {{ blast.query_end }}
+            </td>
+        </tr>
+        <tr>
+            <td colspan="2">
+
+                <div id="Sequence">
+                    {% for c in multiline %}
+                        <span style="writing-mode: vertical-lr; text-orientation: upright;">{{ c }}</span>
+                    {% endfor %}
+                </div>
+            </td>
+
+        </tr>
+        <tr>
+            <td>
+                <b>Subject Start</b>
+            </td>
+            <td>
+                <b>Subject End</b>
+            </td>
+        </tr>
+            <td>
+                {{ blast.subject_start}}
+            </td>
+            <td>
+                {{ blast.subject_end}}
+            </td>
+        </tbody>
+    </table>
+
+
+    <!---->
+
+{% endblock %}

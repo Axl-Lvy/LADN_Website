@@ -1,0 +1,21 @@
+{% extends 'bacterial_genome_annotation/Base.html' %}
+{% block content %}
+
+<div class="backgroundPage">
+    <div class="searchAlign">    
+        <div class="searchPage">
+            <div class="container">
+        <h1>Contact</h1>
+
+        <form method="post" action=".">
+            {% csrf_token %}
+
+            {{ form.as_p }}
+
+            <button class="btn btn-secondary">Submit</button>
+        </form>
+        <br>
+        </div>
+    </div>
+</div>
+{% endblock %}  

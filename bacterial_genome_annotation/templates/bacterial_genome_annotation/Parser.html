@@ -1,0 +1,78 @@
+{% extends 'bacterial_genome_annotation/Base.html' %}
+{% load static %}
+{% block content %}
+
+    <!--<META HTTP-EQUIV="Refresh" CONTENT="30; URL=http://127.0.0.1:8000/Parser/">-->
+    <div>
+
+        <p>{{ progression }}</p>
+        <table>
+            <thead id="thead_blast">
+            <th colspan="4">
+                Query
+            </th>
+            <tr>
+                <td>
+                    <b>Name</b>
+                </td>
+                <td>
+                    <b>Accession</b>
+                </td>
+                <td>
+                    <b>Evalue</b>
+                </td>
+                <td>
+                    <b>identities</b>
+                </td>
+                <!-- <td>
+                    identit
+                </td>
+                <td>
+                    len
+                </td> -->
+            </tr>
+            </thead>
+            <tbody>
+
+            {% for hit in results %}
+                <tr>
+
+                    <td class="link-primary">
+
+                        <a href="{% url 'alignment' id=hit.id %}">{{ hit.definition }}</a>
+                        <!--{{hit.definition}}-->
+                    </td>
+                    <td>
+                        {{ hit.accession }}
+                    </td>
+                    <td>
+                        {{ hit.value }}
+                    </td>
+                    <td>
+                        {{ hit.identitie }} %
+                    </td>
+                    <!-- <td>
+                    {{hit.ident}}
+                    
+                </td>
+                <td>
+                   {{hit.lenn}} 
+                </td>  60000-->
+                </tr>
+            {% endfor %}
+            </tbody>
+
+        </table>
+
+    </div>
+
+    {% if not isDone %}
+        <script type="text/javascript">
+            setInterval(function () {
+                window.location.reload()
+            }, 5000)
+        </script>
+    {% endif %}
+
+
+{% endblock %}

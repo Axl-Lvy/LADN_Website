@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>bacterial_genome_annotation.utils &mdash; LADN 1.0.0 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script src="../../_static/sphinx_highlight.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            LADN
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">source</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">LADN</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">bacterial_genome_annotation.utils</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for bacterial_genome_annotation.utils</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This file contains usefully functions that are used in many functions, such as blast or fasta parser.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">Bio.Blast</span> <span class="kn">import</span> <span class="n">NCBIWWW</span><span class="p">,</span> <span class="n">NCBIXML</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">.models</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="k">except</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">models</span> <span class="kn">import</span> <span class="o">*</span>
+
+
+<span class="c1"># Usefull function and class are coded here.</span>
+
+<div class="viewcode-block" id="blastn"><a class="viewcode-back" href="../../bacterial_genome_annotation.html#bacterial_genome_annotation.utils.blastn">[docs]</a><span class="k">def</span> <span class="nf">blastn</span><span class="p">(</span><span class="n">blast</span><span class="p">:</span> <span class="n">BlastResult</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The blastn function takes a BlastResult object as an argument and returns the results of a blastn search</span>
+<span class="sd">    of the NCBI database. It does this by using BioPython to query the NCBI website for 100 hits with an expect value</span>
+<span class="sd">    less than 1e-10, and then parses through these results to find relevant information about each hit.</span>
+
+<span class="sd">    :param blast:BlastResult: Get the blast result from the database</span>
+<span class="sd">    :return: The result of the blast query</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">result_handle</span> <span class="o">=</span> <span class="n">NCBIWWW</span><span class="o">.</span><span class="n">qblast</span><span class="p">(</span><span class="s2">&quot;blastn&quot;</span><span class="p">,</span> <span class="s2">&quot;nt&quot;</span><span class="p">,</span> <span class="n">blast</span><span class="o">.</span><span class="n">sequence</span><span class="p">,</span> <span class="n">hitlist_size</span><span class="o">=</span><span class="mi">101</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;blasting : </span><span class="si">{</span><span class="n">blast</span><span class="o">.</span><span class="n">sequence</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">blast_results</span> <span class="o">=</span> <span class="n">result_handle</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;results.xml&#39;</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+        <span class="n">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">blast_results</span><span class="p">)</span>
+    <span class="n">record</span> <span class="o">=</span> <span class="n">NCBIXML</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="s1">&#39;results.xml&#39;</span><span class="p">),</span> <span class="p">)</span>
+    <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">align</span> <span class="ow">in</span> <span class="n">record</span><span class="o">.</span><span class="n">alignments</span><span class="p">:</span>
+        <span class="n">hit</span> <span class="o">=</span> <span class="n">BlastHit</span><span class="p">()</span>
+        <span class="n">hit</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="n">align</span><span class="o">.</span><span class="n">hit_id</span>
+        <span class="n">hit</span><span class="o">.</span><span class="n">accession</span> <span class="o">=</span> <span class="n">align</span><span class="o">.</span><span class="n">accession</span>
+        <span class="n">hit</span><span class="o">.</span><span class="n">definition</span> <span class="o">=</span> <span class="n">align</span><span class="o">.</span><span class="n">hit_def</span>
+        <span class="n">hit</span><span class="o">.</span><span class="n">len</span> <span class="o">=</span> <span class="n">align</span><span class="o">.</span><span class="n">length</span>
+        <span class="n">hit</span><span class="o">.</span><span class="n">num</span> <span class="o">=</span> <span class="n">i</span>
+        <span class="n">hit</span><span class="o">.</span><span class="n">blastResult</span> <span class="o">=</span> <span class="n">blast</span>
+        <span class="k">for</span> <span class="n">hsp</span> <span class="ow">in</span> <span class="n">align</span><span class="o">.</span><span class="n">hsps</span><span class="p">:</span>
+            <span class="n">hit</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">hsp</span><span class="o">.</span><span class="n">expect</span>
+            <span class="n">hit</span><span class="o">.</span><span class="n">identitie</span> <span class="o">=</span> <span class="p">(</span><span class="n">hsp</span><span class="o">.</span><span class="n">identities</span> <span class="o">/</span> <span class="n">hsp</span><span class="o">.</span><span class="n">align_length</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span>
+            <span class="n">hit</span><span class="o">.</span><span class="n">align_length</span> <span class="o">=</span> <span class="n">hsp</span><span class="o">.</span><span class="n">align_length</span>
+            <span class="n">hit</span><span class="o">.</span><span class="n">score</span> <span class="o">=</span> <span class="n">hsp</span><span class="o">.</span><span class="n">score</span>
+            <span class="n">hit</span><span class="o">.</span><span class="n">query_end</span> <span class="o">=</span> <span class="n">hsp</span><span class="o">.</span><span class="n">query_end</span>
+            <span class="n">hit</span><span class="o">.</span><span class="n">query_start</span> <span class="o">=</span> <span class="n">hsp</span><span class="o">.</span><span class="n">query_start</span>
+            <span class="n">hit</span><span class="o">.</span><span class="n">query</span> <span class="o">=</span> <span class="n">hsp</span><span class="o">.</span><span class="n">query</span>
+            <span class="n">hit</span><span class="o">.</span><span class="n">subject</span> <span class="o">=</span> <span class="n">hsp</span><span class="o">.</span><span class="n">sbjct</span>
+            <span class="n">hit</span><span class="o">.</span><span class="n">gaps</span> <span class="o">=</span> <span class="n">hsp</span><span class="o">.</span><span class="n">gaps</span>
+            <span class="n">hit</span><span class="o">.</span><span class="n">match</span> <span class="o">=</span> <span class="n">hsp</span><span class="o">.</span><span class="n">match</span>
+            <span class="n">hit</span><span class="o">.</span><span class="n">subject_start</span> <span class="o">=</span> <span class="n">hsp</span><span class="o">.</span><span class="n">sbjct_start</span>
+            <span class="n">hit</span><span class="o">.</span><span class="n">subject_end</span> <span class="o">=</span> <span class="n">hsp</span><span class="o">.</span><span class="n">sbjct_end</span>
+        <span class="n">hit</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+        <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="n">blast</span><span class="o">.</span><span class="n">isFinished</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">blast</span><span class="o">.</span><span class="n">save</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="blastp"><a class="viewcode-back" href="../../bacterial_genome_annotation.html#bacterial_genome_annotation.utils.blastp">[docs]</a><span class="k">def</span> <span class="nf">blastp</span><span class="p">(</span><span class="n">sequence</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The blastp function takes a sequence as input and returns the results of a blastp search of that sequence against</span>
+<span class="sd">    the NCBI nr database. The function also saves the results to an xml file called &#39;results.xml&#39;</span>
+
+<span class="sd">    :param sequence:str: Input the sequence that is to be searched</span>
+<span class="sd">    :return: The result of a blastp search</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">result_handle</span> <span class="o">=</span> <span class="n">NCBIWWW</span><span class="o">.</span><span class="n">qblast</span><span class="p">(</span><span class="s2">&quot;blastp&quot;</span><span class="p">,</span> <span class="s2">&quot;nr&quot;</span><span class="p">,</span> <span class="n">sequence</span><span class="p">)</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;results.xml&#39;</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">save_file</span><span class="p">:</span>
+        <span class="n">blast_results</span> <span class="o">=</span> <span class="n">result_handle</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+        <span class="n">save_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">blast_results</span><span class="p">)</span></div>
+
+
+<span class="c1"># Sequence compressor</span>
+
+<div class="viewcode-block" id="cds2compact"><a class="viewcode-back" href="../../bacterial_genome_annotation.html#bacterial_genome_annotation.utils.cds2compact">[docs]</a><span class="k">def</span> <span class="nf">cds2compact</span><span class="p">(</span><span class="n">sequence</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compress a DNA sequence from base 15 to base 15**4</span>
+<span class="sd">    :param sequence:str: The full DNA sequence</span>
+<span class="sd">    :return: The compressed DNA sequence.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">letter2number</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;A&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;C&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;G&#39;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s1">&#39;T&#39;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span> <span class="s1">&#39;R&#39;</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span> <span class="s1">&#39;Y&#39;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span> <span class="s1">&#39;S&#39;</span><span class="p">:</span> <span class="mi">6</span><span class="p">,</span> <span class="s1">&#39;W&#39;</span><span class="p">:</span> <span class="mi">7</span><span class="p">,</span> <span class="s1">&#39;K&#39;</span><span class="p">:</span> <span class="mi">8</span><span class="p">,</span> <span class="s1">&#39;M&#39;</span><span class="p">:</span> <span class="mi">9</span><span class="p">,</span> <span class="s1">&#39;B&#39;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> <span class="s1">&#39;D&#39;</span><span class="p">:</span> <span class="mi">11</span><span class="p">,</span>
+                     <span class="s1">&#39;H&#39;</span><span class="p">:</span> <span class="mi">12</span><span class="p">,</span> <span class="s1">&#39;V&#39;</span><span class="p">:</span> <span class="mi">13</span><span class="p">,</span> <span class="s1">&#39;N&#39;</span><span class="p">:</span> <span class="mi">14</span><span class="p">}</span>
+    <span class="n">prefix</span> <span class="o">=</span> <span class="p">(</span><span class="mi">4</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">sequence</span><span class="p">)</span> <span class="o">%</span> <span class="mi">4</span><span class="p">)</span> <span class="o">%</span> <span class="mi">4</span>
+    <span class="n">sequence</span> <span class="o">=</span> <span class="s1">&#39;A&#39;</span> <span class="o">*</span> <span class="n">prefix</span> <span class="o">+</span> <span class="n">sequence</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="nb">chr</span><span class="p">(</span><span class="n">prefix</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">sequence</span><span class="p">)</span> <span class="o">//</span> <span class="mi">4</span><span class="p">):</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">4</span><span class="p">):</span>
+            <span class="n">s</span> <span class="o">+=</span> <span class="mi">15</span> <span class="o">**</span> <span class="n">j</span> <span class="o">*</span> <span class="n">letter2number</span><span class="p">[</span><span class="n">sequence</span><span class="p">[</span><span class="mi">4</span> <span class="o">*</span> <span class="n">i</span> <span class="o">+</span> <span class="n">j</span><span class="p">]]</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">result</span> <span class="o">+</span> <span class="nb">chr</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">result</span></div>
+
+
+<div class="viewcode-block" id="compact2cds"><a class="viewcode-back" href="../../bacterial_genome_annotation.html#bacterial_genome_annotation.utils.compact2cds">[docs]</a><span class="k">def</span> <span class="nf">compact2cds</span><span class="p">(</span><span class="n">sequence</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Uncompress a DNA sequence from base 15**4 to base 15</span>
+<span class="sd">    :param sequence:str: The compressed DNA sequence</span>
+<span class="sd">    :return: The full DNA sequence.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">number2letter</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">:</span> <span class="s1">&#39;A&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">:</span> <span class="s1">&#39;C&#39;</span><span class="p">,</span> <span class="mi">2</span><span class="p">:</span> <span class="s1">&#39;G&#39;</span><span class="p">,</span> <span class="mi">3</span><span class="p">:</span> <span class="s1">&#39;T&#39;</span><span class="p">,</span> <span class="mi">4</span><span class="p">:</span> <span class="s1">&#39;R&#39;</span><span class="p">,</span> <span class="mi">5</span><span class="p">:</span> <span class="s1">&#39;Y&#39;</span><span class="p">,</span> <span class="mi">6</span><span class="p">:</span> <span class="s1">&#39;S&#39;</span><span class="p">,</span> <span class="mi">7</span><span class="p">:</span> <span class="s1">&#39;W&#39;</span><span class="p">,</span> <span class="mi">8</span><span class="p">:</span> <span class="s1">&#39;K&#39;</span><span class="p">,</span> <span class="mi">9</span><span class="p">:</span> <span class="s1">&#39;M&#39;</span><span class="p">,</span> <span class="mi">10</span><span class="p">:</span> <span class="s1">&#39;B&#39;</span><span class="p">,</span> <span class="mi">11</span><span class="p">:</span> <span class="s1">&#39;D&#39;</span><span class="p">,</span>
+                     <span class="mi">12</span><span class="p">:</span> <span class="s1">&#39;H&#39;</span><span class="p">,</span> <span class="mi">13</span><span class="p">:</span> <span class="s1">&#39;V&#39;</span><span class="p">,</span> <span class="mi">14</span><span class="p">:</span> <span class="s1">&#39;N&#39;</span><span class="p">}</span>
+    <span class="n">prefix</span> <span class="o">=</span> <span class="nb">ord</span><span class="p">(</span><span class="n">sequence</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+    <span class="k">for</span> <span class="n">char</span> <span class="ow">in</span> <span class="n">sequence</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">4</span><span class="p">):</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">result</span> <span class="o">+</span> <span class="n">number2letter</span><span class="p">[</span><span class="nb">ord</span><span class="p">(</span><span class="n">char</span><span class="p">)</span> <span class="o">//</span> <span class="p">(</span><span class="mi">15</span> <span class="o">**</span> <span class="n">i</span><span class="p">)</span> <span class="o">%</span> <span class="mi">15</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">result</span><span class="p">[</span><span class="n">prefix</span><span class="p">:]</span></div>
+
+
+<div class="viewcode-block" id="pep2compact"><a class="viewcode-back" href="../../bacterial_genome_annotation.html#bacterial_genome_annotation.utils.pep2compact">[docs]</a><span class="k">def</span> <span class="nf">pep2compact</span><span class="p">(</span><span class="n">sequence</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compress a peptidic sequence from base 25 to base 25**3</span>
+<span class="sd">    :param sequence:str: The full peptidic sequence</span>
+<span class="sd">    :return: The compressed peptidic sequence.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">letter2number</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;A&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;R&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;N&#39;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s1">&#39;D&#39;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span> <span class="s1">&#39;C&#39;</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span> <span class="s1">&#39;Q&#39;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span> <span class="s1">&#39;E&#39;</span><span class="p">:</span> <span class="mi">6</span><span class="p">,</span> <span class="s1">&#39;G&#39;</span><span class="p">:</span> <span class="mi">7</span><span class="p">,</span> <span class="s1">&#39;H&#39;</span><span class="p">:</span> <span class="mi">8</span><span class="p">,</span> <span class="s1">&#39;I&#39;</span><span class="p">:</span> <span class="mi">9</span><span class="p">,</span> <span class="s1">&#39;L&#39;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> <span class="s1">&#39;K&#39;</span><span class="p">:</span> <span class="mi">11</span><span class="p">,</span>
+                     <span class="s1">&#39;M&#39;</span><span class="p">:</span> <span class="mi">12</span><span class="p">,</span> <span class="s1">&#39;F&#39;</span><span class="p">:</span> <span class="mi">13</span><span class="p">,</span> <span class="s1">&#39;P&#39;</span><span class="p">:</span> <span class="mi">14</span><span class="p">,</span> <span class="s1">&#39;S&#39;</span><span class="p">:</span> <span class="mi">15</span><span class="p">,</span> <span class="s1">&#39;T&#39;</span><span class="p">:</span> <span class="mi">16</span><span class="p">,</span> <span class="s1">&#39;W&#39;</span><span class="p">:</span> <span class="mi">17</span><span class="p">,</span> <span class="s1">&#39;Y&#39;</span><span class="p">:</span> <span class="mi">18</span><span class="p">,</span> <span class="s1">&#39;V&#39;</span><span class="p">:</span> <span class="mi">19</span><span class="p">,</span> <span class="s1">&#39;X&#39;</span><span class="p">:</span> <span class="mi">20</span><span class="p">,</span> <span class="s1">&#39;B&#39;</span><span class="p">:</span> <span class="mi">21</span><span class="p">,</span> <span class="s1">&#39;Z&#39;</span><span class="p">:</span> <span class="mi">22</span><span class="p">,</span>
+                     <span class="s1">&#39;J&#39;</span><span class="p">:</span> <span class="mi">23</span><span class="p">,</span> <span class="s1">&#39;U&#39;</span><span class="p">:</span> <span class="mi">24</span><span class="p">}</span>
+    <span class="n">prefix</span> <span class="o">=</span> <span class="p">(</span><span class="mi">3</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">sequence</span><span class="p">)</span> <span class="o">%</span> <span class="mi">3</span><span class="p">)</span> <span class="o">%</span> <span class="mi">3</span>
+    <span class="n">sequence</span> <span class="o">=</span> <span class="s1">&#39;A&#39;</span> <span class="o">*</span> <span class="n">prefix</span> <span class="o">+</span> <span class="n">sequence</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="nb">chr</span><span class="p">(</span><span class="n">prefix</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">sequence</span><span class="p">)</span> <span class="o">//</span> <span class="mi">3</span><span class="p">):</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
+            <span class="n">s</span> <span class="o">+=</span> <span class="mi">24</span> <span class="o">**</span> <span class="n">j</span> <span class="o">*</span> <span class="n">letter2number</span><span class="p">[</span><span class="n">sequence</span><span class="p">[</span><span class="mi">3</span> <span class="o">*</span> <span class="n">i</span> <span class="o">+</span> <span class="n">j</span><span class="p">]]</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">result</span> <span class="o">+</span> <span class="nb">chr</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">result</span></div>
+
+
+<div class="viewcode-block" id="compact2pep"><a class="viewcode-back" href="../../bacterial_genome_annotation.html#bacterial_genome_annotation.utils.compact2pep">[docs]</a><span class="k">def</span> <span class="nf">compact2pep</span><span class="p">(</span><span class="n">sequence</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Uncompress a peptidic sequence from base 25**3 to base 25</span>
+<span class="sd">    :param sequence:str: The compressed peptidic sequence</span>
+<span class="sd">    :return: The full peptidic sequence.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">number2letter</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">:</span> <span class="s1">&#39;A&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">:</span> <span class="s1">&#39;R&#39;</span><span class="p">,</span> <span class="mi">2</span><span class="p">:</span> <span class="s1">&#39;N&#39;</span><span class="p">,</span> <span class="mi">3</span><span class="p">:</span> <span class="s1">&#39;D&#39;</span><span class="p">,</span> <span class="mi">4</span><span class="p">:</span> <span class="s1">&#39;C&#39;</span><span class="p">,</span> <span class="mi">5</span><span class="p">:</span> <span class="s1">&#39;Q&#39;</span><span class="p">,</span> <span class="mi">6</span><span class="p">:</span> <span class="s1">&#39;E&#39;</span><span class="p">,</span> <span class="mi">7</span><span class="p">:</span> <span class="s1">&#39;G&#39;</span><span class="p">,</span> <span class="mi">8</span><span class="p">:</span> <span class="s1">&#39;H&#39;</span><span class="p">,</span> <span class="mi">9</span><span class="p">:</span> <span class="s1">&#39;I&#39;</span><span class="p">,</span> <span class="mi">10</span><span class="p">:</span> <span class="s1">&#39;L&#39;</span><span class="p">,</span> <span class="mi">11</span><span class="p">:</span> <span class="s1">&#39;K&#39;</span><span class="p">,</span>
+                     <span class="mi">12</span><span class="p">:</span> <span class="s1">&#39;M&#39;</span><span class="p">,</span> <span class="mi">13</span><span class="p">:</span> <span class="s1">&#39;F&#39;</span><span class="p">,</span> <span class="mi">14</span><span class="p">:</span> <span class="s1">&#39;P&#39;</span><span class="p">,</span> <span class="mi">15</span><span class="p">:</span> <span class="s1">&#39;S&#39;</span><span class="p">,</span> <span class="mi">16</span><span class="p">:</span> <span class="s1">&#39;T&#39;</span><span class="p">,</span> <span class="mi">17</span><span class="p">:</span> <span class="s1">&#39;W&#39;</span><span class="p">,</span> <span class="mi">18</span><span class="p">:</span> <span class="s1">&#39;Y&#39;</span><span class="p">,</span> <span class="mi">19</span><span class="p">:</span> <span class="s1">&#39;V&#39;</span><span class="p">,</span> <span class="mi">20</span><span class="p">:</span> <span class="s1">&#39;X&#39;</span><span class="p">,</span> <span class="mi">21</span><span class="p">:</span> <span class="s1">&#39;B&#39;</span><span class="p">,</span> <span class="mi">22</span><span class="p">:</span> <span class="s1">&#39;Z&#39;</span><span class="p">,</span>
+                     <span class="mi">23</span><span class="p">:</span> <span class="s1">&#39;J&#39;</span><span class="p">,</span> <span class="mi">24</span><span class="p">:</span> <span class="s1">&#39;U&#39;</span><span class="p">}</span>
+    <span class="n">prefix</span> <span class="o">=</span> <span class="nb">ord</span><span class="p">(</span><span class="n">sequence</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+    <span class="k">for</span> <span class="n">char</span> <span class="ow">in</span> <span class="n">sequence</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">result</span> <span class="o">+</span> <span class="n">number2letter</span><span class="p">[</span><span class="nb">ord</span><span class="p">(</span><span class="n">char</span><span class="p">)</span> <span class="o">//</span> <span class="p">(</span><span class="mi">24</span> <span class="o">**</span> <span class="n">i</span><span class="p">)</span> <span class="o">%</span> <span class="mi">24</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">result</span><span class="p">[</span><span class="n">prefix</span><span class="p">:]</span></div>
+
+
+<span class="c1"># Sequence renversor</span>
+
+<div class="viewcode-block" id="reverseSequence"><a class="viewcode-back" href="../../bacterial_genome_annotation.html#bacterial_genome_annotation.utils.reverseSequence">[docs]</a><span class="k">def</span> <span class="nf">reverseSequence</span><span class="p">(</span><span class="n">sequence</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Find the complementary DNA sequence</span>
+<span class="sd">    :param sequence:str: The original sequence</span>
+<span class="sd">    :return: The complementary sequence</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">dico</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;A&#39;</span><span class="p">:</span> <span class="s1">&#39;T&#39;</span><span class="p">,</span> <span class="s1">&#39;C&#39;</span><span class="p">:</span> <span class="s1">&#39;G&#39;</span><span class="p">,</span> <span class="s1">&#39;G&#39;</span><span class="p">:</span> <span class="s1">&#39;C&#39;</span><span class="p">,</span> <span class="s1">&#39;T&#39;</span><span class="p">:</span> <span class="s1">&#39;A&#39;</span><span class="p">,</span> <span class="s1">&#39;R&#39;</span><span class="p">:</span> <span class="s1">&#39;Y&#39;</span><span class="p">,</span> <span class="s1">&#39;Y&#39;</span><span class="p">:</span> <span class="s1">&#39;R&#39;</span><span class="p">,</span> <span class="s1">&#39;S&#39;</span><span class="p">:</span> <span class="s1">&#39;S&#39;</span><span class="p">,</span> <span class="s1">&#39;W&#39;</span><span class="p">:</span> <span class="s1">&#39;W&#39;</span><span class="p">,</span> <span class="s1">&#39;K&#39;</span><span class="p">:</span> <span class="s1">&#39;M&#39;</span><span class="p">,</span> <span class="s1">&#39;M&#39;</span><span class="p">:</span> <span class="s1">&#39;K&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;B&#39;</span><span class="p">:</span> <span class="s1">&#39;V&#39;</span><span class="p">,</span> <span class="s1">&#39;D&#39;</span><span class="p">:</span> <span class="s1">&#39;H&#39;</span><span class="p">,</span> <span class="s1">&#39;H&#39;</span><span class="p">:</span> <span class="s1">&#39;D&#39;</span><span class="p">,</span> <span class="s1">&#39;V&#39;</span><span class="p">:</span> <span class="s1">&#39;B&#39;</span><span class="p">,</span> <span class="s1">&#39;N&#39;</span><span class="p">:</span> <span class="s1">&#39;N&#39;</span><span class="p">}</span>
+    <span class="n">reverseSeq</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+    <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">sequence</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>
+        <span class="n">reverseSeq</span> <span class="o">=</span> <span class="n">reverseSeq</span> <span class="o">+</span> <span class="n">dico</span><span class="p">[</span><span class="n">c</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">reverseSeq</span></div>
+
+
+<span class="c1">## Fasta parser (better than SeqIO)</span>
+
+<div class="viewcode-block" id="fastaParser"><a class="viewcode-back" href="../../bacterial_genome_annotation.html#bacterial_genome_annotation.utils.fastaParser">[docs]</a><span class="k">def</span> <span class="nf">fastaParser</span><span class="p">(</span><span class="n">fileName</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">genome</span><span class="p">:</span> <span class="n">Genome</span><span class="p">,</span> <span class="n">defaultAnnotator</span><span class="p">:</span> <span class="n">User</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">defaultValidator</span><span class="p">:</span> <span class="n">User</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The fastaParser function parses a fasta file to extract sequence and annotations. It is better than the biopython</span>
+<span class="sd">    parser because it deals with the read direction.</span>
+<span class="sd">    :param fileName:str: The fasta file</span>
+<span class="sd">    :param genome:Genome: The genome the fasta file is coding for</span>
+<span class="sd">    :param defaultAnnotator:User: The annotator who annotated each annotation in this file</span>
+<span class="sd">    :param defaultValidator:User: The validator who validated each annotation in this fil</span>
+<span class="sd">    :return: Tuple of sequences, annotations</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">fileName</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+        <span class="n">lines</span> <span class="o">=</span> <span class="n">file</span><span class="o">.</span><span class="n">readlines</span><span class="p">()</span>
+    <span class="n">sequences</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">annotations</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;&gt;&#39;</span><span class="p">):</span>
+            <span class="n">description</span> <span class="o">=</span> <span class="n">line</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)</span>
+            <span class="n">s</span> <span class="o">=</span> <span class="n">Sequence</span><span class="p">()</span>
+            <span class="n">s</span><span class="o">.</span><span class="n">sequence</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+            <span class="n">s</span><span class="o">.</span><span class="n">genome</span> <span class="o">=</span> <span class="n">genome</span>
+            <span class="n">s</span><span class="o">.</span><span class="n">isCds</span> <span class="o">=</span> <span class="n">description</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;cds&#39;</span>
+            <span class="n">s</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="n">description</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="p">(</span><span class="s1">&#39;_cds&#39;</span> <span class="k">if</span> <span class="n">s</span><span class="o">.</span><span class="n">isCds</span> <span class="k">else</span> <span class="s1">&#39;_pep&#39;</span><span class="p">)</span>
+            <span class="n">splitDesc</span> <span class="o">=</span> <span class="n">description</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;:&#39;</span><span class="p">)</span>
+            <span class="n">s</span><span class="o">.</span><span class="n">position</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">splitDesc</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">s</span><span class="o">.</span><span class="n">direction</span> <span class="o">=</span> <span class="n">splitDesc</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;1&#39;</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="n">s</span><span class="o">.</span><span class="n">direction</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="n">sequences</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+            <span class="n">j</span> <span class="o">=</span> <span class="mi">3</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">description</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">3</span><span class="p">:</span>
+                <span class="n">sequences</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">hasValid</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="n">annotations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Annotation</span><span class="p">())</span>
+                <span class="n">annotations</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">isValidate</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="c1"># annotations[-1].id = sequences[-1].id + &#39;.0&#39;</span>
+                <span class="n">annotations</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">sequence</span> <span class="o">=</span> <span class="n">sequences</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>  <span class="c1"># Set the foreign key to link with the sequence</span>
+                <span class="k">if</span> <span class="n">defaultAnnotator</span> <span class="o">!=</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">annotations</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">annotator</span> <span class="o">=</span> <span class="n">defaultAnnotator</span>
+                <span class="k">if</span> <span class="n">defaultValidator</span> <span class="o">!=</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">annotations</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">validator</span> <span class="o">=</span> <span class="n">defaultValidator</span>
+
+                <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">description</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">j</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">description</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;gene:&#39;</span><span class="p">):</span>
+                        <span class="n">annotations</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">gene</span> <span class="o">=</span> <span class="n">description</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;:&#39;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+                        <span class="n">j</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="k">elif</span> <span class="n">description</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;gene_biotype:&#39;</span><span class="p">):</span>
+                        <span class="n">annotations</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">gene_biotype</span> <span class="o">=</span> <span class="n">description</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;:&#39;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+                        <span class="n">j</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="k">elif</span> <span class="n">description</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;transcript_biotype:&#39;</span><span class="p">):</span>
+                        <span class="n">annotations</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">transcript_biotype</span> <span class="o">=</span> <span class="n">description</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;:&#39;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+                        <span class="n">j</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="k">elif</span> <span class="n">description</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;gene_symbol:&#39;</span><span class="p">):</span>
+                        <span class="n">annotations</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">gene_symbol</span> <span class="o">=</span> <span class="n">description</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;:&#39;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+                        <span class="n">j</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="k">elif</span> <span class="n">description</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;description:&#39;</span><span class="p">):</span>
+                        <span class="n">annotations</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span> <span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">description</span><span class="p">[</span><span class="n">j</span><span class="p">:])</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;:&#39;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+                        <span class="n">j</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">description</span><span class="p">)</span>
+                    <span class="k">elif</span> <span class="n">description</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;transcript:&#39;</span><span class="p">):</span>
+                        <span class="n">annotations</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">transcript</span> <span class="o">=</span> <span class="n">description</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;:&#39;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+                        <span class="n">j</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="n">description</span><span class="p">[</span><span class="n">j</span><span class="p">])</span>
+                        <span class="n">j</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="n">annotations</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">isValidate</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">):</span>
+                <span class="n">line</span> <span class="o">=</span> <span class="n">line</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">sequences</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">sequence</span> <span class="o">=</span> <span class="n">sequences</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">sequence</span> <span class="o">+</span> <span class="n">line</span>
+    <span class="k">return</span> <span class="n">sequences</span><span class="p">,</span> <span class="n">annotations</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, LADN.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

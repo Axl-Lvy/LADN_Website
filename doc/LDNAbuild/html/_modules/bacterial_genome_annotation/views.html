@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>bacterial_genome_annotation.views &mdash; LADN 1.0.0 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script src="../../_static/sphinx_highlight.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            LADN
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">source</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">LADN</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">bacterial_genome_annotation.views</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for bacterial_genome_annotation.views</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This is the views file. It contains all the views used by the website. You can find here the interface between front</span>
+<span class="sd">and back.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">.forms</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">.models</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">.models</span> <span class="kn">import</span> <span class="n">Sequence</span>
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">blastn</span><span class="p">,</span> <span class="n">blastp</span><span class="p">,</span> <span class="n">reverseSequence</span>
+<span class="kn">from</span> <span class="nn">django.http</span> <span class="kn">import</span> <span class="n">HttpRequest</span><span class="p">,</span> <span class="n">JsonResponse</span>
+<span class="kn">import</span> <span class="nn">threading</span>
+<span class="kn">from</span> <span class="nn">django.views</span> <span class="kn">import</span> <span class="n">generic</span>
+<span class="kn">from</span> <span class="nn">django.urls</span> <span class="kn">import</span> <span class="n">reverse_lazy</span>
+<span class="kn">from</span> <span class="nn">django.contrib.auth</span> <span class="kn">import</span> <span class="n">login</span><span class="p">,</span> <span class="n">authenticate</span><span class="p">,</span> <span class="n">views</span> <span class="k">as</span> <span class="n">auth_views</span>
+<span class="kn">from</span> <span class="nn">django.contrib.auth.password_validation</span> <span class="kn">import</span> <span class="n">validate_password</span> <span class="k">as</span> <span class="n">v_p</span>
+<span class="kn">from</span> <span class="nn">django.core.exceptions</span> <span class="kn">import</span> <span class="n">ValidationError</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">from</span> <span class="nn">django.contrib.auth.decorators</span> <span class="kn">import</span> <span class="n">login_required</span><span class="p">,</span> <span class="n">user_passes_test</span>
+<span class="kn">from</span> <span class="nn">django.core.paginator</span> <span class="kn">import</span> <span class="n">Paginator</span>
+<span class="kn">from</span> <span class="nn">django.shortcuts</span> <span class="kn">import</span> <span class="n">resolve_url</span><span class="p">,</span> <span class="n">redirect</span><span class="p">,</span> <span class="n">render</span>
+<span class="kn">from</span> <span class="nn">django.contrib</span> <span class="kn">import</span> <span class="n">messages</span>
+<span class="kn">from</span> <span class="nn">django.core.mail</span> <span class="kn">import</span> <span class="n">send_mail</span>
+<span class="kn">from</span> <span class="nn">django.template.loader</span> <span class="kn">import</span> <span class="n">render_to_string</span>
+<span class="kn">from</span> <span class="nn">django.db.models</span> <span class="kn">import</span> <span class="n">Q</span>
+<span class="kn">from</span> <span class="nn">django.contrib.auth.models</span> <span class="kn">import</span> <span class="n">Group</span><span class="p">,</span> <span class="n">Permission</span>
+
+
+<span class="c1"># Create your views here.</span>
+
+
+<div class="viewcode-block" id="home"><a class="viewcode-back" href="../../bacterial_genome_annotation.html#bacterial_genome_annotation.views.home">[docs]</a><span class="k">def</span> <span class="nf">home</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">HttpRequest</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The home function renders the home page of the LADN website.</span>
+<span class="sd">    </span>
+<span class="sd">    </span>
+<span class="sd">    :param request: HttpRequest: Pass the request from the server to the function</span>
+<span class="sd">    :return: The home</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;bacterial_genome_annotation/home.html&#39;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="help"><a class="viewcode-back" href="../../bacterial_genome_annotation.html#bacterial_genome_annotation.views.help">[docs]</a><span class="k">def</span> <span class="nf">help</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">HttpRequest</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The help function renders the help page.</span>
+<span class="sd">    </span>
+<span class="sd">    </span>
+<span class="sd">    :param request: HttpRequest: Pass the request to the view</span>
+<span class="sd">    :return: A rendered version of the help page</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;bacterial_genome_annotation/Help.html&#39;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="AddGenome"><a class="viewcode-back" href="../../bacterial_genome_annotation.html#bacterial_genome_annotation.views.AddGenome">[docs]</a><span class="k">def</span> <span class="nf">AddGenome</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">HttpRequest</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The AddGenome function is used to add a new genome to the database.</span>
+<span class="sd">    It takes in a request and returns an HttpResponse object.</span>
+<span class="sd">    </span>
+<span class="sd">    :param request: HttpRequest: Get the data from the form</span>
+<span class="sd">    :return: A page that has a form for adding a new genome</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;bacterial_genome_annotation/AddGenome.html&#39;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="AccountView"><a class="viewcode-back" href="../../bacterial_genome_annotation.html#bacterial_genome_annotation.views.AccountView">[docs]</a><span class="nd">@login_required</span>
+<span class="k">def</span> <span class="nf">AccountView</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">HttpRequest</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The AccountView function is used to display the account of a user.</span>
+<span class="sd">    It displays all the annotations and/or validations done by this user, and all the ones that he has to do.</span>
+<span class="sd">    Another role of this function is to show if a user is friend with another one, or if it&#39;s his own account.</span>
+
+<span class="sd">    :param request:HttpRequest: Get the user who is logged in</span>
+<span class="sd">    :param id:str: Identify the user</span>
+<span class="sd">    :return: The account of the user</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">id</span> <span class="o">==</span> <span class="s1">&#39;0&#39;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="s1">&#39;account&#39;</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+    <span class="n">user</span> <span class="o">=</span> <span class="n">User</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">user</span><span class="o">.</span><span class="n">groups</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;admin&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+        <span class="n">role</span> <span class="o">=</span> <span class="s1">&#39;admin&#39;</span>
+    <span class="k">elif</span> <span class="n">user</span><span class="o">.</span><span class="n">groups</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;validator&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+        <span class="n">role</span> <span class="o">=</span> <span class="s1">&#39;validator&#39;</span>
+    <span class="k">elif</span> <span class="n">user</span><span class="o">.</span><span class="n">groups</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;annotator&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+        <span class="n">role</span> <span class="o">=</span> <span class="s1">&#39;annotator&#39;</span>
+    <span class="k">elif</span> <span class="n">user</span><span class="o">.</span><span class="n">groups</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;reader&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+        <span class="n">role</span> <span class="o">=</span> <span class="s1">&#39;reader&#39;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">role</span> <span class="o">=</span> <span class="s1">&#39;no&#39;</span>
+    <span class="n">validations</span> <span class="o">=</span> <span class="n">Assignation</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">validator</span><span class="o">=</span><span class="n">user</span><span class="p">,</span> <span class="n">isValidated</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">isAnnotated</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="s1">&#39;date&#39;</span><span class="p">)</span>
+    <span class="n">validationsDone</span> <span class="o">=</span> <span class="n">Assignation</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">validator</span><span class="o">=</span><span class="n">user</span><span class="p">,</span> <span class="n">isValidated</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="s1">&#39;date&#39;</span><span class="p">)</span>
+    <span class="n">assignationsNew</span> <span class="o">=</span> <span class="n">Assignation</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">annotator</span><span class="o">=</span><span class="n">user</span><span class="p">,</span> <span class="n">isRevision</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">isValidated</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                                                 <span class="n">isAnnotated</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="s1">&#39;date&#39;</span><span class="p">)</span>
+    <span class="n">assignationsRevision</span> <span class="o">=</span> <span class="n">Assignation</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">annotator</span><span class="o">=</span><span class="n">user</span><span class="p">,</span> <span class="n">isRevision</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">isValidated</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                                                      <span class="n">isAnnotated</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="s1">&#39;date&#39;</span><span class="p">)</span>
+    <span class="n">assignationsDone</span> <span class="o">=</span> <span class="n">Assignation</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">annotator</span><span class="o">=</span><span class="n">user</span><span class="p">,</span> <span class="n">isAnnotated</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">isValidated</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="s1">&#39;date&#39;</span><span class="p">)</span>
+    <span class="n">assignationsValidated</span> <span class="o">=</span> <span class="n">Assignation</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">annotator</span><span class="o">=</span><span class="n">user</span><span class="p">,</span> <span class="n">isAnnotated</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">isValidated</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span>
+        <span class="s1">&#39;date&#39;</span><span class="p">)</span>
+    <span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;user&#39;</span><span class="p">:</span> <span class="n">user</span><span class="p">,</span>
+        <span class="s1">&#39;role&#39;</span><span class="p">:</span> <span class="n">role</span><span class="p">,</span>
+        <span class="s1">&#39;own&#39;</span><span class="p">:</span> <span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">id</span> <span class="o">==</span> <span class="nb">int</span><span class="p">(</span><span class="nb">id</span><span class="p">),</span>
+        <span class="s1">&#39;isFriend&#39;</span><span class="p">:</span> <span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">friends</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">(),</span>
+        <span class="s1">&#39;assignationsNew&#39;</span><span class="p">:</span> <span class="n">assignationsNew</span><span class="p">,</span>
+        <span class="s1">&#39;assignationsRevision&#39;</span><span class="p">:</span> <span class="n">assignationsRevision</span><span class="p">,</span>
+        <span class="s1">&#39;assignationsDone&#39;</span><span class="p">:</span> <span class="n">assignationsDone</span><span class="p">,</span>
+        <span class="s1">&#39;validations&#39;</span><span class="p">:</span> <span class="n">validations</span><span class="p">,</span>
+        <span class="s1">&#39;validationsDone&#39;</span><span class="p">:</span> <span class="n">validationsDone</span><span class="p">,</span>
+        <span class="s1">&#39;assignationsValidated&#39;</span><span class="p">:</span> <span class="n">assignationsValidated</span><span class="p">,</span>
+        <span class="p">}</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;bacterial_genome_annotation/Account.html&#39;</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="AddToFavorites"><a class="viewcode-back" href="../../bacterial_genome_annotation.html#bacterial_genome_annotation.views.AddToFavorites">[docs]</a><span class="nd">@login_required</span>
+<span class="k">def</span> <span class="nf">AddToFavorites</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">HttpRequest</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The AddToFavorites function is called when the user click on &#39;Add to favorites&#39; button. It simply adds the account</span>
+<span class="sd">    to his favorites.</span>
+
+<span class="sd">    :param request:HttpRequest: Get the user who is logged in</span>
+<span class="sd">    :param id:str: Identify the user</span>
+<span class="sd">    :return: The account of the user</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">user</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">user</span>
+    <span class="n">user</span><span class="o">.</span><span class="n">friends</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">User</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">))</span>
+    <span class="n">user</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="s1">&#39;account&#39;</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="RemoveFromFavorites"><a class="viewcode-back" href="../../bacterial_genome_annotation.html#bacterial_genome_annotation.views.RemoveFromFavorites">[docs]</a><span class="nd">@login_required</span>
+<span class="k">def</span> <span class="nf">RemoveFromFavorites</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">HttpRequest</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The RemoveFromFavorites function is called when the user click on &#39;Remove from favorites&#39; button. It simply removes</span>
+<span class="sd">    the account from his favorites.</span>
+
+<span class="sd">    :param request:HttpRequest: Get the user who is logged in</span>
+<span class="sd">    :param id:str: Identify the user</span>
+<span class="sd">    :return: The account of the user</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">user</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">user</span>
+    <span class="n">user</span><span class="o">.</span><span class="n">friends</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">User</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">))</span>
+    <span class="n">user</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="s1">&#39;account&#39;</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="PromoteToAnnotator"><a class="viewcode-back" href="../../bacterial_genome_annotation.html#bacterial_genome_annotation.views.PromoteToAnnotator">[docs]</a><span class="nd">@login_required</span>
+<span class="nd">@user_passes_test</span><span class="p">(</span><span class="k">lambda</span> <span class="n">u</span><span class="p">:</span> <span class="n">u</span><span class="o">.</span><span class="n">has_perm</span><span class="p">(</span><span class="s1">&#39;bacterial_genome_annotation.can_promote_annotator&#39;</span><span class="p">))</span>
+<span class="k">def</span> <span class="nf">PromoteToAnnotator</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">HttpRequest</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The PromoteToAnnotator function is used to promote a user to the annotator group.</span>
+<span class="sd">    It takes in an id and checks if the user is already an annotator, if not it promotes them.</span>
+<span class="sd">    </span>
+<span class="sd">    :param request: HttpRequest: Get the current user</span>
+<span class="sd">    :param id: str: Get the user id from the url</span>
+<span class="sd">    :return: Redirect to the account view</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">futureAnnotator</span> <span class="o">=</span> <span class="n">User</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">futureAnnotator</span><span class="o">.</span><span class="n">groups</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;annotator&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+        <span class="n">messages</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;This user is already an annotator !&#39;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">g</span> <span class="o">=</span> <span class="n">Group</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;annotator&#39;</span><span class="p">)</span>
+        <span class="n">futureAnnotator</span><span class="o">.</span><span class="n">groups</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">g</span><span class="p">)</span>
+        <span class="n">futureAnnotator</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+        <span class="n">g</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="s1">&#39;account&#39;</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="PromoteToValidator"><a class="viewcode-back" href="../../bacterial_genome_annotation.html#bacterial_genome_annotation.views.PromoteToValidator">[docs]</a><span class="nd">@login_required</span>
+<span class="nd">@user_passes_test</span><span class="p">(</span><span class="k">lambda</span> <span class="n">u</span><span class="p">:</span> <span class="n">u</span><span class="o">.</span><span class="n">has_perm</span><span class="p">(</span><span class="s1">&#39;bacterial_genome_annotation.can_promote_validator&#39;</span><span class="p">))</span>
+<span class="k">def</span> <span class="nf">PromoteToValidator</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">HttpRequest</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The PromoteToAdmin function is used to promote a user to validator.</span>
+<span class="sd">    It takes in an id and checks if the user is already a validator, if not it adds them to the group of validators.</span>
+<span class="sd">    </span>
+<span class="sd">    :param request: HttpRequest: Get the user&#39;s id</span>
+<span class="sd">    :param id: str: Get the id of the user we want to promote</span>
+<span class="sd">    :return: Redirect to the account view</span>
+<span class="sd">    :doc-author: Trelent</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">futureValidator</span> <span class="o">=</span> <span class="n">User</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">futureValidator</span><span class="o">.</span><span class="n">groups</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;validator&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+        <span class="n">messages</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;This user is already a validator !&#39;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">g</span> <span class="o">=</span> <span class="n">Group</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;validator&#39;</span><span class="p">)</span>
+        <span class="n">futureValidator</span><span class="o">.</span><span class="n">groups</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">g</span><span class="p">)</span>
+        <span class="n">futureValidator</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+        <span class="n">g</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="s1">&#39;account&#39;</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="PromoteToAdmin"><a class="viewcode-back" href="../../bacterial_genome_annotation.html#bacterial_genome_annotation.views.PromoteToAdmin">[docs]</a><span class="nd">@login_required</span>
+<span class="nd">@user_passes_test</span><span class="p">(</span><span class="k">lambda</span> <span class="n">u</span><span class="p">:</span> <span class="n">u</span><span class="o">.</span><span class="n">has_perm</span><span class="p">(</span><span class="s1">&#39;bacterial_genome_annotation.can_promote_admin&#39;</span><span class="p">))</span>
+<span class="k">def</span> <span class="nf">PromoteToAdmin</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">HttpRequest</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The PromoteToAdmin function is used to promote a user to admin.</span>
+<span class="sd">    It takes in an id and checks if the user is already an admin, if not it adds them to the group of admins.</span>
+<span class="sd">    </span>
+<span class="sd">    :param request: HttpRequest: Get the user&#39;s id</span>
+<span class="sd">    :param id: str: Get the id of the user we want to promote</span>
+<span class="sd">    :return: Redirect to the account view</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">futureAdmin</span> <span class="o">=</span> <span class="n">User</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">futureAdmin</span><span class="o">.</span><span class="n">groups</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;admin&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+        <span class="n">messages</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;This user is already an admin !&#39;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">g</span> <span class="o">=</span> <span class="n">Group</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;admin&#39;</span><span class="p">)</span>
+        <span class="n">futureAdmin</span><span class="o">.</span><span class="n">groups</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">g</span><span class="p">)</span>
+        <span class="n">futureAdmin</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+        <span class="n">g</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="s1">&#39;account&#39;</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Downgrade"><a class="viewcode-back" href="../../bacterial_genome_annotation.html#bacterial_genome_annotation.views.Downgrade">[docs]</a><span class="nd">@login_required</span>
+<span class="nd">@user_passes_test</span><span class="p">(</span><span class="k">lambda</span> <span class="n">u</span><span class="p">:</span> <span class="n">u</span><span class="o">.</span><span class="n">has_perm</span><span class="p">(</span><span class="s1">&#39;bacterial_genome_annotation.can_downgrade&#39;</span><span class="p">))</span>
+<span class="k">def</span> <span class="nf">Downgrade</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">HttpRequest</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The Downgrade function is used to downgrade a user of one group.</span>
+<span class="sd">    It takes in an id and removes their highest group.</span>
+
+<span class="sd">    :param request: HttpRequest: Get the user&#39;s id</span>
+<span class="sd">    :param id: str: Get the id of the user we want to promote</span>
+<span class="sd">    :return: Redirect to the account view</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">futureNoob</span> <span class="o">=</span> <span class="n">User</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">futureNoob</span><span class="o">.</span><span class="n">groups</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;admin&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+        <span class="n">g</span> <span class="o">=</span> <span class="n">Group</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;admin&#39;</span><span class="p">)</span>
+        <span class="n">futureNoob</span><span class="o">.</span><span class="n">groups</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">g</span><span class="p">)</span>
+        <span class="n">futureNoob</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+        <span class="n">g</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="s1">&#39;account&#39;</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">futureNoob</span><span class="o">.</span><span class="n">groups</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;validator&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+        <span class="n">g</span> <span class="o">=</span> <span class="n">Group</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;validator&#39;</span><span class="p">)</span>
+        <span class="n">futureNoob</span><span class="o">.</span><span class="n">groups</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">g</span><span class="p">)</span>
+        <span class="n">futureNoob</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+        <span class="n">g</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="s1">&#39;account&#39;</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">futureNoob</span><span class="o">.</span><span class="n">groups</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;annotator&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+        <span class="n">g</span> <span class="o">=</span> <span class="n">Group</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;annotator&#39;</span><span class="p">)</span>
+        <span class="n">futureNoob</span><span class="o">.</span><span class="n">groups</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">g</span><span class="p">)</span>
+        <span class="n">futureNoob</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+        <span class="n">g</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="s1">&#39;account&#39;</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="s1">&#39;account&#39;</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="AccountModificationView"><a class="viewcode-back" href="../../bacterial_genome_annotation.html#bacterial_genome_annotation.views.AccountModificationView">[docs]</a><span class="nd">@login_required</span>
+<span class="k">def</span> <span class="nf">AccountModificationView</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">HttpRequest</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The AccountModificationView function is used to modify the user&#39;s account information.</span>
+<span class="sd">    It takes a request as an argument and returns a render of the AccountModification.html template with parameters</span>
+<span class="sd">    containing the user, and form.</span>
+
+<span class="sd">    :param request:HttpRequest: Pass the request from the view to the template</span>
+<span class="sd">    :return: A page that allows the user to change their information</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">user</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">user</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s1">&#39;POST&#39;</span><span class="p">:</span>
+        <span class="n">form</span> <span class="o">=</span> <span class="n">UserChangeForm</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="p">,</span> <span class="n">request</span><span class="o">.</span><span class="n">FILES</span><span class="p">,</span> <span class="n">instance</span><span class="o">=</span><span class="n">user</span><span class="p">)</span>
+        <span class="n">form</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="s1">&#39;account&#39;</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="n">user</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">form</span> <span class="o">=</span> <span class="n">UserChangeForm</span><span class="p">(</span><span class="n">instance</span><span class="o">=</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">)</span>
+    <span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;user&#39;</span><span class="p">:</span> <span class="n">user</span><span class="p">,</span>
+        <span class="s1">&#39;form&#39;</span><span class="p">:</span> <span class="n">form</span><span class="p">,</span>
+        <span class="p">}</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;bacterial_genome_annotation/AccountModification.html&#39;</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="MembersView"><a class="viewcode-back" href="../../bacterial_genome_annotation.html#bacterial_genome_annotation.views.MembersView">[docs]</a><span class="nd">@login_required</span>
+<span class="k">def</span> <span class="nf">MembersView</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">HttpRequest</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The MembersView function is used to display the members of the website.</span>
+<span class="sd">    It takes in a request and returns a render function that will be loaded with</span>
+<span class="sd">    the appropriate parameters for the MembersView page. The form is also passed in</span>
+<span class="sd">    as well as all users from User model, paginator object and page object.</span>
+
+<span class="sd">    :param request:HttpRequest: Get the user object from the request</span>
+<span class="sd">    :return: A list of all the users in the database</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">page</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;page&#39;</span><span class="p">,</span> <span class="s1">&#39;1&#39;</span><span class="p">))</span>
+    <span class="n">form</span> <span class="o">=</span> <span class="n">UserSearchForm</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="p">)</span>
+    <span class="n">users</span> <span class="o">=</span> <span class="n">User</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">form</span><span class="o">.</span><span class="n">is_valid</span><span class="p">():</span>
+        <span class="n">first_name</span> <span class="o">=</span> <span class="n">form</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s1">&#39;first_name&#39;</span><span class="p">]</span>
+        <span class="n">email</span> <span class="o">=</span> <span class="n">form</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s1">&#39;email&#39;</span><span class="p">]</span>
+        <span class="n">last_name</span> <span class="o">=</span> <span class="n">form</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s1">&#39;last_name&#39;</span><span class="p">]</span>
+        <span class="n">phone_number</span> <span class="o">=</span> <span class="n">form</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s1">&#39;phone_number&#39;</span><span class="p">]</span>
+        <span class="n">show_only_favorites</span> <span class="o">=</span> <span class="n">form</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s1">&#39;show_only_favorites&#39;</span><span class="p">]</span>
+        <span class="c1"># Querry</span>
+        <span class="k">if</span> <span class="n">show_only_favorites</span><span class="p">:</span>
+            <span class="n">users</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">friends</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">first_name</span> <span class="o">!=</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
+            <span class="n">users</span> <span class="o">=</span> <span class="n">users</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">first_name__icontains</span><span class="o">=</span><span class="n">first_name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">last_name</span> <span class="o">!=</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
+            <span class="n">users</span> <span class="o">=</span> <span class="n">users</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">last_name__icontains</span><span class="o">=</span><span class="n">last_name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">phone_number</span> <span class="o">!=</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
+            <span class="n">users</span> <span class="o">=</span> <span class="n">users</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">phone_no__icontains</span><span class="o">=</span><span class="n">phone_number</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">email</span> <span class="o">!=</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
+            <span class="n">users</span> <span class="o">=</span> <span class="n">users</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">email__icontains</span><span class="o">=</span><span class="n">email</span><span class="p">)</span>
+    <span class="n">paginator</span> <span class="o">=</span> <span class="n">Paginator</span><span class="p">(</span><span class="n">users</span><span class="p">,</span> <span class="mi">50</span><span class="p">)</span>
+    <span class="n">pageObj</span> <span class="o">=</span> <span class="n">paginator</span><span class="o">.</span><span class="n">get_page</span><span class="p">(</span><span class="n">page</span><span class="p">)</span>
+    <span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;form&quot;</span><span class="p">:</span> <span class="n">form</span><span class="p">,</span>
+        <span class="s2">&quot;users&quot;</span><span class="p">:</span> <span class="n">users</span><span class="p">,</span>
+        <span class="s2">&quot;page_obj&quot;</span><span class="p">:</span> <span class="n">pageObj</span><span class="p">,</span>
+        <span class="p">}</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;bacterial_genome_annotation/Members.html&#39;</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ANNOT"><a class="viewcode-back" href="../../bacterial_genome_annotation.html#bacterial_genome_annotation.views.ANNOT">[docs]</a><span class="nd">@login_required</span>
+<span class="nd">@user_passes_test</span><span class="p">(</span><span class="k">lambda</span> <span class="n">u</span><span class="p">:</span> <span class="n">u</span><span class="o">.</span><span class="n">has_perm</span><span class="p">(</span><span class="s1">&#39;bacterial_genome_annotation.can_annotate&#39;</span><span class="p">))</span>
+<span class="k">def</span> <span class="nf">ANNOT</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">HttpRequest</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The ANNOT function is used to annotate a sequence. It takes in the id of the sequence and returns</span>
+<span class="sd">    the annotation form for that sequence. The user can then fill out the form and submit it, which will</span>
+<span class="sd">    save their annotations to the database.</span>
+
+<span class="sd">    :param request:HttpRequest: Get the user&#39;s request</span>
+<span class="sd">    :param id:str: Get the sequence object from the database</span>
+<span class="sd">    :return: The annotation page</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">sequence</span> <span class="o">=</span> <span class="n">Sequence</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">)</span>
+    <span class="n">form</span> <span class="o">=</span> <span class="n">AnnotationFormBySearch</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="s1">&#39;empty&#39;</span>
+    <span class="c1"># sequences = []</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;POST&quot;</span><span class="p">:</span>
+        <span class="n">form</span> <span class="o">=</span> <span class="n">AnnotationFormBySearch</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">form</span><span class="o">.</span><span class="n">is_valid</span><span class="p">():</span>
+            <span class="n">gene</span> <span class="o">=</span> <span class="n">form</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s1">&#39;gene&#39;</span><span class="p">]</span>
+            <span class="n">gene_biotype</span> <span class="o">=</span> <span class="n">form</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s1">&#39;gene_biotype&#39;</span><span class="p">]</span>
+            <span class="n">transcript_biotype</span> <span class="o">=</span> <span class="n">form</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s1">&#39;transcript_biotype&#39;</span><span class="p">]</span>
+            <span class="n">gene_symbol</span> <span class="o">=</span> <span class="n">form</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s1">&#39;gene_symbol&#39;</span><span class="p">]</span>
+            <span class="n">description</span> <span class="o">=</span> <span class="n">form</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s1">&#39;description&#39;</span><span class="p">]</span>
+            <span class="n">transcript</span> <span class="o">=</span> <span class="n">form</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s1">&#39;transcript&#39;</span><span class="p">]</span>
+            <span class="n">annotation</span> <span class="o">=</span> <span class="n">Annotation</span><span class="p">()</span>
+            <span class="n">annotation</span><span class="o">.</span><span class="n">gene</span> <span class="o">=</span> <span class="n">gene</span>
+            <span class="n">annotation</span><span class="o">.</span><span class="n">gene_biotype</span> <span class="o">=</span> <span class="n">gene_biotype</span>
+            <span class="n">annotation</span><span class="o">.</span><span class="n">transcript_biotype</span> <span class="o">=</span> <span class="n">transcript_biotype</span>
+            <span class="n">annotation</span><span class="o">.</span><span class="n">gene_symbol</span> <span class="o">=</span> <span class="n">gene_symbol</span>
+            <span class="n">annotation</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span> <span class="n">description</span>
+            <span class="n">annotation</span><span class="o">.</span><span class="n">transcript</span> <span class="o">=</span> <span class="n">transcript</span>
+            <span class="n">annotation</span><span class="o">.</span><span class="n">sequence</span> <span class="o">=</span> <span class="n">sequence</span>
+            <span class="n">annotation</span><span class="o">.</span><span class="n">annotator</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">user</span>
+            <span class="n">annotation</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="s1">&#39;sequence&#39;</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">)</span>
+
+    <span class="c1"># , &quot;sequences&quot;: sequences})</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;bacterial_genome_annotation/annoter.html&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;form&quot;</span><span class="p">:</span> <span class="n">form</span><span class="p">})</span></div>
+
+
+<div class="viewcode-block" id="Valid_Annotation"><a class="viewcode-back" href="../../bacterial_genome_annotation.html#bacterial_genome_annotation.views.Valid_Annotation">[docs]</a><span class="nd">@login_required</span>
+<span class="nd">@user_passes_test</span><span class="p">(</span><span class="k">lambda</span> <span class="n">u</span><span class="p">:</span> <span class="n">u</span><span class="o">.</span><span class="n">has_perm</span><span class="p">(</span><span class="s1">&#39;bacterial_genome_annotation.can_validate&#39;</span><span class="p">))</span>
+<span class="k">def</span> <span class="nf">Valid_Annotation</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">HttpRequest</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The Valid_Annotation function is usefully for validators to validate an annotation.</span>
+
+<span class="sd">    :param request:HttpRequest: Get the user who is logged in</span>
+<span class="sd">    :param id:str: Identify the annotation</span>
+<span class="sd">    :return: The sequence view</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">annotation</span> <span class="o">=</span> <span class="n">Annotation</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">)</span>
+    <span class="n">annotation</span><span class="o">.</span><span class="n">isValidate</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">annotation</span><span class="o">.</span><span class="n">validator</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">user</span>
+    <span class="n">annotation</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="s1">&#39;sequence&#39;</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="n">annotation</span><span class="o">.</span><span class="n">sequence</span><span class="o">.</span><span class="n">id</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Delete_Annotation"><a class="viewcode-back" href="../../bacterial_genome_annotation.html#bacterial_genome_annotation.views.Delete_Annotation">[docs]</a><span class="nd">@login_required</span>
+<span class="nd">@user_passes_test</span><span class="p">(</span><span class="k">lambda</span> <span class="n">u</span><span class="p">:</span> <span class="n">u</span><span class="o">.</span><span class="n">has_perm</span><span class="p">(</span><span class="s1">&#39;bacterial_genome_annotation.can_validate&#39;</span><span class="p">))</span>
+<span class="k">def</span> <span class="nf">Delete_Annotation</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">HttpRequest</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The Delete_Annotation function is usefully for validators to delete an annotation.</span>
+
+<span class="sd">    :param request:HttpRequest: The request</span>
+<span class="sd">    :param id:str: Identify the annotation</span>
+<span class="sd">    :return: The sequence view</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">annotation</span> <span class="o">=</span> <span class="n">Annotation</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">)</span>
+    <span class="n">sequence</span> <span class="o">=</span> <span class="n">annotation</span><span class="o">.</span><span class="n">sequence</span>
+    <span class="n">annotation</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="s1">&#39;sequence&#39;</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="n">sequence</span><span class="o">.</span><span class="n">id</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Assign"><a class="viewcode-back" href="../../bacterial_genome_annotation.html#bacterial_genome_annotation.views.Assign">[docs]</a><span class="nd">@login_required</span>
+<span class="nd">@user_passes_test</span><span class="p">(</span><span class="k">lambda</span> <span class="n">u</span><span class="p">:</span> <span class="n">u</span><span class="o">.</span><span class="n">has_perm</span><span class="p">(</span><span class="s1">&#39;bacterial_genome_annotation.can_assign&#39;</span><span class="p">))</span>
+<span class="k">def</span> <span class="nf">Assign</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">HttpRequest</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The Assign function is used to assign a sequence to an annotator.</span>
+<span class="sd">    It takes in a request and the sequence id and returns a render function that will show the user&#39;s favorites members</span>
+<span class="sd">    list. Note that only members who are at least annotators are shown.</span>
+
+<span class="sd">    :param request:HttpRequest: Get the user object from the request</span>
+<span class="sd">    :param id:str: The sequence id</span>
+<span class="sd">    :return: The assignation page</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">sequence</span> <span class="o">=</span> <span class="n">Sequence</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;POST&quot;</span><span class="p">:</span>
+        <span class="n">annotator</span> <span class="o">=</span> <span class="n">User</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="p">[</span><span class="s1">&#39;Annotator&#39;</span><span class="p">])</span>
+        <span class="n">assignation</span> <span class="o">=</span> <span class="n">Assignation</span><span class="p">(</span><span class="n">annotator</span><span class="o">=</span><span class="n">annotator</span><span class="p">,</span> <span class="n">validator</span><span class="o">=</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">,</span> <span class="n">sequence</span><span class="o">=</span><span class="n">sequence</span><span class="p">)</span>
+        <span class="n">assignation</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="s1">&#39;sequence&#39;</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">)</span>
+    <span class="n">perm</span> <span class="o">=</span> <span class="n">Permission</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">codename</span><span class="o">=</span><span class="s1">&#39;can_annotate&#39;</span><span class="p">)</span>
+    <span class="n">favorites</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">friends</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">Q</span><span class="p">(</span><span class="n">groups__permissions</span><span class="o">=</span><span class="n">perm</span><span class="p">)</span> <span class="o">|</span> <span class="n">Q</span><span class="p">(</span><span class="n">user_permissions</span><span class="o">=</span><span class="n">perm</span><span class="p">))</span><span class="o">.</span><span class="n">distinct</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">favorites</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+        <span class="n">choices</span> <span class="o">=</span> <span class="p">[(</span><span class="n">u</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">u</span><span class="o">.</span><span class="n">email</span><span class="p">)</span> <span class="k">for</span> <span class="n">u</span> <span class="ow">in</span> <span class="n">favorites</span><span class="p">]</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">choices</span><span class="p">)</span>
+        <span class="n">form</span> <span class="o">=</span> <span class="n">AssignateForm</span><span class="p">(</span><span class="n">choices</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">form</span> <span class="o">=</span> <span class="n">AssignateForm</span><span class="p">([(</span><span class="s1">&#39;empty&#39;</span><span class="p">,</span> <span class="s1">&#39;No favorite&#39;</span><span class="p">)])</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;bacterial_genome_annotation/Assign.html&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;form&quot;</span><span class="p">:</span> <span class="n">form</span><span class="p">})</span></div>
+
+
+<div class="viewcode-block" id="Parser"><a class="viewcode-back" href="../../bacterial_genome_annotation.html#bacterial_genome_annotation.views.Parser">[docs]</a><span class="nd">@login_required</span>
+<span class="k">def</span> <span class="nf">Parser</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">HttpRequest</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The Parser function is used to parse the BLAST results and display them in a table.</span>
+<span class="sd">    It takes as input an id, which is the primary key of a Sequence object.</span>
+<span class="sd">    If no such sequence exists, it returns an error message. Otherwise, if the sequence has not been parsed yet</span>
+<span class="sd">    (i.e., there is no corresponding BlastResult object),</span>
+<span class="sd">    it creates one with that id and starts parsing its corresponding BLAST result file (either blastn or blastp</span>
+<span class="sd">    depending on whether it&#39;s a CDS or not). Then shows the results.</span>
+<span class="sd">    Otherwise, if the sequence has already been parsed before (i.e., there already exists a BlastResult), it just shows</span>
+<span class="sd">    the results</span>
+<span class="sd">    </span>
+<span class="sd">    :param request: HttpRequest: Get the request made by the user to access a specific page</span>
+<span class="sd">    :param id: Get the id of the sequence we want to annotate</span>
+<span class="sd">    :return: A page with the results of the blast</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;progression&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;results&quot;</span><span class="p">:</span> <span class="p">[]}</span>
+    <span class="k">if</span> <span class="nb">id</span> <span class="o">!=</span> <span class="s1">&#39;0&#39;</span><span class="p">:</span>
+        <span class="n">query</span> <span class="o">=</span> <span class="n">BlastResult</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">query</span><span class="p">:</span>
+            <span class="n">sequence</span> <span class="o">=</span> <span class="n">Sequence</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">)</span>
+            <span class="n">blast</span> <span class="o">=</span> <span class="n">BlastResult</span><span class="p">()</span>
+            <span class="n">blast</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="nb">id</span>
+            <span class="n">blast</span><span class="o">.</span><span class="n">isCds</span> <span class="o">=</span> <span class="n">sequence</span><span class="o">.</span><span class="n">isCds</span>
+            <span class="n">blast</span><span class="o">.</span><span class="n">sequence</span> <span class="o">=</span> <span class="n">sequence</span><span class="o">.</span><span class="n">sequence</span>
+            <span class="n">blast</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">sequence</span><span class="o">.</span><span class="n">isCds</span><span class="p">:</span>
+                <span class="n">thread</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">blastn</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">blast</span><span class="p">,))</span>
+                <span class="n">thread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">thread</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">blastp</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">blast</span><span class="p">,))</span>
+                <span class="n">thread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">list</span> <span class="o">=</span> <span class="n">BlastHit</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">blastResult__id</span><span class="o">=</span><span class="nb">id</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">list</span><span class="p">:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">BlastResult</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">):</span>
+                    <span class="n">params</span><span class="p">[</span><span class="s1">&#39;progression&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;Something went wrong&#39;</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">params</span><span class="p">[</span><span class="s1">&#39;progression&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;Still in progress&#39;</span>
+                <span class="n">params</span><span class="p">[</span><span class="s1">&#39;isDone&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">params</span><span class="p">[</span><span class="s1">&#39;progression&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;Finished !&#39;</span>
+                <span class="n">params</span><span class="p">[</span><span class="s1">&#39;results&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span>
+                <span class="n">params</span><span class="p">[</span><span class="s1">&#39;isDone&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;bacterial_genome_annotation/Parser.html&#39;</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Search"><a class="viewcode-back" href="../../bacterial_genome_annotation.html#bacterial_genome_annotation.views.Search">[docs]</a><span class="k">def</span> <span class="nf">Search</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">HttpRequest</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The Search function is used to search for a specific gene, transcript or genome.</span>
+<span class="sd">    It takes in the following parameters:</span>
+<span class="sd">        request - The HttpRequest object that contains metadata about the request made to this view.</span>
+<span class="sd">        type - A string representing what kind of search it is (cds, genome or transcript)</span>
+<span class="sd">    </span>
+<span class="sd">    :param request: HttpRequest: Construct the httpresponse</span>
+<span class="sd">    :return: The page with the search results</span>
+<span class="sd">    :doc-author: Trelent</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">page</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;page&#39;</span><span class="p">,</span> <span class="s1">&#39;1&#39;</span><span class="p">))</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="s1">&#39;empty&#39;</span>
+    <span class="n">sequences</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">genomes</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">typeForm</span> <span class="o">=</span> <span class="n">SearchTypeForm</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="p">)</span>
+    <span class="nb">type</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;type&#39;</span><span class="p">,</span> <span class="s1">&#39;cds&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">type</span> <span class="o">==</span> <span class="s1">&#39;gen&#39;</span><span class="p">:</span>
+        <span class="n">searchForm</span> <span class="o">=</span> <span class="n">GenomeSearchForm</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">searchForm</span><span class="o">.</span><span class="n">is_valid</span><span class="p">():</span>
+            <span class="n">bacterial_name</span> <span class="o">=</span> <span class="n">searchForm</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s1">&#39;bacterial_name&#39;</span><span class="p">]</span>
+            <span class="n">seq</span> <span class="o">=</span> <span class="n">searchForm</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s1">&#39;sequence&#39;</span><span class="p">]</span>
+            <span class="n">genomes</span> <span class="o">=</span> <span class="n">Genome</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">bacterial_name</span> <span class="o">!=</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
+                <span class="n">genomes</span> <span class="o">=</span> <span class="n">genomes</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">id__icontains</span><span class="o">=</span><span class="n">bacterial_name</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">seq</span> <span class="o">!=</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
+                <span class="n">seq</span> <span class="o">=</span> <span class="n">seq</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span>
+                <span class="n">splitSearch</span> <span class="o">=</span> <span class="n">seq</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;%&#39;</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">splitSearch</span><span class="p">:</span>
+                    <span class="n">genomes</span> <span class="o">=</span> <span class="n">genomes</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">fullSequence__contains</span><span class="o">=</span><span class="n">s</span><span class="p">)</span>
+                <span class="n">genomes</span> <span class="o">=</span> <span class="n">genomes</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span>
+                    <span class="n">fullSequence__regex</span><span class="o">=</span><span class="s1">&#39;.*&#39;</span> <span class="o">+</span> <span class="s1">&#39;.*&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">splitSearch</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;.*&#39;</span><span class="p">)</span>
+        <span class="n">paginator</span> <span class="o">=</span> <span class="n">Paginator</span><span class="p">(</span><span class="n">genomes</span><span class="p">,</span> <span class="mi">50</span><span class="p">)</span>
+        <span class="n">pageObj</span> <span class="o">=</span> <span class="n">paginator</span><span class="o">.</span><span class="n">get_page</span><span class="p">(</span><span class="n">page</span><span class="p">)</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;typeForm&quot;</span><span class="p">:</span> <span class="n">typeForm</span><span class="p">,</span>
+            <span class="s2">&quot;form&quot;</span><span class="p">:</span> <span class="n">searchForm</span><span class="p">,</span>
+            <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="n">description</span><span class="p">,</span>
+            <span class="s2">&quot;genomes&quot;</span><span class="p">:</span> <span class="n">genomes</span><span class="p">,</span>
+            <span class="s2">&quot;page_obj_genomes&quot;</span><span class="p">:</span> <span class="n">pageObj</span><span class="p">,</span>
+            <span class="p">}</span>
+        <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;bacterial_genome_annotation/search.html&#39;</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
+
+    <span class="n">searchForm</span> <span class="o">=</span> <span class="n">SequenceSearchForm</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;POST&quot;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">searchForm</span><span class="o">.</span><span class="n">is_valid</span><span class="p">():</span>
+            <span class="n">bacterial_name</span> <span class="o">=</span> <span class="n">searchForm</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s1">&#39;bacterial_name&#39;</span><span class="p">]</span>
+            <span class="n">isCds</span> <span class="o">=</span> <span class="nb">type</span> <span class="o">==</span> <span class="s1">&#39;cds&#39;</span>
+            <span class="n">gene_name</span> <span class="o">=</span> <span class="n">searchForm</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s1">&#39;gene_name&#39;</span><span class="p">]</span>
+            <span class="n">transcript_name</span> <span class="o">=</span> <span class="n">searchForm</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s1">&#39;transcript_name&#39;</span><span class="p">]</span>
+            <span class="n">description</span> <span class="o">=</span> <span class="n">searchForm</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s1">&#39;description&#39;</span><span class="p">]</span>
+            <span class="n">seq</span> <span class="o">=</span> <span class="n">searchForm</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s1">&#39;sequence&#39;</span><span class="p">]</span>
+            <span class="c1"># Query</span>
+            <span class="n">sequences</span> <span class="o">=</span> <span class="n">Sequence</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">isCds</span><span class="o">=</span><span class="n">isCds</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">bacterial_name</span> <span class="o">!=</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
+                <span class="n">sequences</span> <span class="o">=</span> <span class="n">sequences</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">genome__id__icontains</span><span class="o">=</span><span class="n">bacterial_name</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">gene_name</span> <span class="o">!=</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
+                <span class="n">sequences</span> <span class="o">=</span> <span class="n">sequences</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span>
+                    <span class="n">annotationQueryName__isValidate</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">annotationQueryName__gene__icontains</span><span class="o">=</span><span class="n">gene_name</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">transcript_name</span> <span class="o">!=</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
+                <span class="n">sequences</span> <span class="o">=</span> <span class="n">sequences</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span>
+                    <span class="n">annotationQueryName__isValidate</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">annotationQueryName__transcript__icontains</span><span class="o">=</span><span class="n">transcript_name</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">description</span> <span class="o">!=</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
+                <span class="n">sequences</span> <span class="o">=</span> <span class="n">sequences</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span>
+                    <span class="n">annotationQueryName__isValidate</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">annotationQueryName__description__icontains</span><span class="o">=</span><span class="n">description</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">seq</span> <span class="o">!=</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
+                <span class="n">seq</span> <span class="o">=</span> <span class="n">seq</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span>
+                <span class="n">splitSearch</span> <span class="o">=</span> <span class="n">seq</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;%&#39;</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">splitSearch</span><span class="p">:</span>
+                    <span class="n">sequences</span> <span class="o">=</span> <span class="n">sequences</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">sequence__contains</span><span class="o">=</span><span class="n">s</span><span class="p">)</span>
+                <span class="n">sequences</span> <span class="o">=</span> <span class="n">sequences</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span>
+                    <span class="n">sequence__regex</span><span class="o">=</span><span class="s1">&#39;.*&#39;</span> <span class="o">+</span> <span class="s1">&#39;.*&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">splitSearch</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;.*&#39;</span><span class="p">)</span>
+    <span class="n">paginator</span> <span class="o">=</span> <span class="n">Paginator</span><span class="p">(</span><span class="n">sequences</span><span class="p">,</span> <span class="mi">50</span><span class="p">)</span>
+    <span class="n">pageObj</span> <span class="o">=</span> <span class="n">paginator</span><span class="o">.</span><span class="n">get_page</span><span class="p">(</span><span class="n">page</span><span class="p">)</span>
+    <span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;typeForm&quot;</span><span class="p">:</span> <span class="n">typeForm</span><span class="p">,</span>
+        <span class="s2">&quot;form&quot;</span><span class="p">:</span> <span class="n">searchForm</span><span class="p">,</span>
+        <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="n">description</span><span class="p">,</span>
+        <span class="s2">&quot;sequences&quot;</span><span class="p">:</span> <span class="n">sequences</span><span class="p">,</span>
+        <span class="s2">&quot;page_obj_sequences&quot;</span><span class="p">:</span> <span class="n">pageObj</span><span class="p">,</span>
+        <span class="p">}</span>
+
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;bacterial_genome_annotation/search.html&#39;</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="alignment"><a class="viewcode-back" href="../../bacterial_genome_annotation.html#bacterial_genome_annotation.views.alignment">[docs]</a><span class="k">def</span> <span class="nf">alignment</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">HttpRequest</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The alignment function takes a blast hit id and renders the alignment template with the query, match, and subject</span>
+<span class="sd">    sequences.</span>
+<span class="sd">    The alignment is done by taking three strings: query, match, and subject. The function iterates over each string</span>
+<span class="sd">    to create a multiline string that contains all the characters in order from start to finish.</span>
+<span class="sd">    </span>
+<span class="sd">    :param request: HttpRequest: Get the request from the user</span>
+<span class="sd">    :param id: str: Get the blast hit with the given id</span>
+<span class="sd">    :return: The alignment of the query, match and subject sequences</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">blast</span> <span class="o">=</span> <span class="n">BlastHit</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">)</span>
+    <span class="n">multiline</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">min</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">blast</span><span class="o">.</span><span class="n">query</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">blast</span><span class="o">.</span><span class="n">match</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">blast</span><span class="o">.</span><span class="n">subject</span><span class="p">)])):</span>
+        <span class="n">multiline</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">blast</span><span class="o">.</span><span class="n">query</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="si">}{</span><span class="n">blast</span><span class="o">.</span><span class="n">match</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="si">}{</span><span class="n">blast</span><span class="o">.</span><span class="n">subject</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;blast&quot;</span><span class="p">:</span> <span class="n">blast</span><span class="p">,</span>
+        <span class="s2">&quot;multiline&quot;</span><span class="p">:</span> <span class="n">multiline</span>
+        <span class="p">}</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;bacterial_genome_annotation/alignment.html&#39;</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="FAQ"><a class="viewcode-back" href="../../bacterial_genome_annotation.html#bacterial_genome_annotation.views.FAQ">[docs]</a><span class="k">def</span> <span class="nf">FAQ</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">HttpRequest</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The FAQ function renders the FAQ.html template, which contains a list of frequently asked questions about the</span>
+<span class="sd">    project.</span>
+<span class="sd">    </span>
+<span class="sd">    :param request: HttpRequest: Get the information about the user&#39;s request</span>
+<span class="sd">    :return: The faq page</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;bacterial_genome_annotation/FAQ.html&#39;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="SequenceView"><a class="viewcode-back" href="../../bacterial_genome_annotation.html#bacterial_genome_annotation.views.SequenceView">[docs]</a><span class="k">def</span> <span class="nf">SequenceView</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">HttpRequest</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The SequenceView function is used to display the information of a specific sequence.</span>
+<span class="sd">    It also displays all the annotations that have been made for this particular sequence, and it allows </span>
+<span class="sd">    the user to comment on this particular annotation. It also has links for assigning and validating an </span>
+<span class="sd">    annotation.</span>
+<span class="sd">    </span>
+<span class="sd">    :param request: HttpRequest: Get the request from the user</span>
+<span class="sd">    :param id: str: Get the id of the sequence to be displayed</span>
+<span class="sd">    :return: The sequence page</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">sequence</span><span class="p">:</span> <span class="n">Sequence</span> <span class="o">=</span> <span class="n">Sequence</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">)</span>
+    <span class="n">annotationsValidated</span> <span class="o">=</span> <span class="n">Annotation</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">sequence</span><span class="o">=</span><span class="n">sequence</span><span class="p">,</span> <span class="n">isValidate</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">annotations</span> <span class="o">=</span> <span class="n">Annotation</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">sequence</span><span class="o">=</span><span class="n">sequence</span><span class="p">,</span> <span class="n">isValidate</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">form</span> <span class="o">=</span> <span class="n">CommentForm</span><span class="p">()</span>
+    <span class="n">can_assign</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">can_valid</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">is_authenticated</span><span class="p">:</span>
+        <span class="n">can_assign</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">has_perm</span><span class="p">(</span><span class="s1">&#39;bacterial_genome_annotation.can_assign&#39;</span><span class="p">)</span>
+        <span class="n">can_valid</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">has_perm</span><span class="p">(</span><span class="s1">&#39;bacterial_genome_annotation.can_valid&#39;</span><span class="p">)</span>
+    <span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;seq&quot;</span><span class="p">:</span> <span class="n">sequence</span><span class="p">,</span>
+        <span class="s2">&quot;annotationsValidated&quot;</span><span class="p">:</span> <span class="n">annotationsValidated</span><span class="p">,</span>
+        <span class="s2">&quot;annotations&quot;</span><span class="p">:</span> <span class="n">annotations</span><span class="p">,</span>
+        <span class="s2">&quot;form&quot;</span><span class="p">:</span> <span class="n">form</span><span class="p">,</span>
+        <span class="s2">&quot;can_assign&quot;</span><span class="p">:</span> <span class="n">can_assign</span><span class="p">,</span>
+        <span class="s2">&quot;can_valid&quot;</span><span class="p">:</span> <span class="n">can_valid</span><span class="p">,</span>
+        <span class="p">}</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;bacterial_genome_annotation/sequence.html&#39;</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="GenomeView"><a class="viewcode-back" href="../../bacterial_genome_annotation.html#bacterial_genome_annotation.views.GenomeView">[docs]</a><span class="k">def</span> <span class="nf">GenomeView</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">HttpRequest</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The GenomeView function is used to display the genome of a given bacterial species.</span>
+<span class="sd">    It takes in an id as a parameter and returns the html page with all the relevant information.</span>
+<span class="sd">    The function also uses pagination to allow for viewing of large genomes.</span>
+
+<span class="sd">    :param request:HttpRequest: Get the user&#39;s request</span>
+<span class="sd">    :param id:str: Get the id of the genome to be displayed</span>
+<span class="sd">    :return: A page containing the selected genome with its cds highlighted</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">page</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;page&#39;</span><span class="p">,</span> <span class="s1">&#39;1&#39;</span><span class="p">))</span>
+    <span class="n">genome</span> <span class="o">=</span> <span class="n">Genome</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">)</span>
+
+    <span class="k">class</span> <span class="nc">sequenceAugmented</span><span class="p">:</span>
+        <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">seq</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">seq</span> <span class="o">=</span> <span class="n">seq</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">seq</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">isSeq</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">title</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">isSeq</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">title</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">title</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;ID : </span><span class="si">{</span><span class="n">seq</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="se">\n</span><span class="s2">Position : </span><span class="si">{</span><span class="n">seq</span><span class="o">.</span><span class="n">position</span><span class="si">}</span><span class="s2">&quot;</span>
+
+    <span class="n">seqList</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">fullSeq</span> <span class="o">=</span> <span class="n">genome</span><span class="o">.</span><span class="n">fullSequence</span>
+    <span class="n">i</span> <span class="o">=</span> <span class="p">(</span><span class="n">page</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="mi">10000</span>
+    <span class="n">j</span> <span class="o">=</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">10000</span>
+    <span class="n">sequences</span> <span class="o">=</span> <span class="n">Sequence</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span>
+        <span class="n">genome</span><span class="o">=</span><span class="n">genome</span><span class="p">,</span> <span class="n">isCds</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">position__gt</span><span class="o">=</span><span class="n">i</span><span class="p">,</span> <span class="n">position__lt</span><span class="o">=</span><span class="n">j</span><span class="p">)</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="s1">&#39;position&#39;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">sequences</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">s</span><span class="o">.</span><span class="n">position</span><span class="p">:</span>
+            <span class="n">seqList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sequenceAugmented</span><span class="p">(</span><span class="n">fullSeq</span><span class="p">[</span><span class="n">i</span><span class="p">:</span><span class="n">s</span><span class="o">.</span><span class="n">position</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]))</span>
+            <span class="n">i</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">position</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="n">newS</span> <span class="o">=</span> <span class="n">Sequence</span><span class="p">()</span>
+        <span class="n">newS</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">id</span>
+        <span class="n">newS</span><span class="o">.</span><span class="n">position</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">position</span>
+        <span class="n">b</span> <span class="o">=</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">s</span><span class="o">.</span><span class="n">position</span>
+        <span class="n">e</span> <span class="o">=</span> <span class="n">j</span> <span class="o">-</span> <span class="n">s</span><span class="o">.</span><span class="n">position</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="n">s</span><span class="o">.</span><span class="n">direction</span><span class="p">:</span>
+            <span class="n">tmp</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">sequence</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">tmp</span> <span class="o">=</span> <span class="n">reverseSequence</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">sequence</span><span class="p">)</span>
+        <span class="n">newS</span><span class="o">.</span><span class="n">sequence</span> <span class="o">=</span> <span class="n">tmp</span><span class="p">[</span><span class="n">b</span><span class="p">:</span><span class="n">e</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">e</span> <span class="o">&gt;</span> <span class="n">b</span><span class="p">:</span>
+            <span class="n">seqList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sequenceAugmented</span><span class="p">(</span><span class="n">newS</span><span class="p">))</span>
+        <span class="n">i</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">newS</span><span class="o">.</span><span class="n">sequence</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">i</span> <span class="o">&gt;=</span> <span class="n">j</span><span class="p">:</span>
+            <span class="k">break</span>
+    <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">j</span><span class="p">:</span>
+        <span class="n">seqList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sequenceAugmented</span><span class="p">(</span><span class="n">fullSeq</span><span class="p">[</span><span class="n">i</span><span class="p">:</span><span class="n">j</span><span class="p">]))</span>
+
+    <span class="k">class</span> <span class="nc">pageObj</span><span class="p">:</span>
+        <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">page</span><span class="p">,</span> <span class="n">first</span><span class="p">,</span> <span class="n">last</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">page</span> <span class="o">=</span> <span class="n">page</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">first</span> <span class="o">=</span> <span class="n">first</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">last</span> <span class="o">=</span> <span class="n">last</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">hasPrevious</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">page</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">first</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">hasNext</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">page</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">last</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">previous</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">page</span> <span class="o">-</span> <span class="mi">1</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">next</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">page</span> <span class="o">+</span> <span class="mi">1</span>
+
+    <span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;seqList&#39;</span><span class="p">:</span> <span class="n">seqList</span><span class="p">,</span>
+        <span class="s1">&#39;genome&#39;</span><span class="p">:</span> <span class="n">genome</span><span class="p">,</span>
+        <span class="s1">&#39;fullSequence&#39;</span><span class="p">:</span> <span class="n">genome</span><span class="o">.</span><span class="n">fullSequence</span><span class="p">[(</span><span class="n">page</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="mi">10000</span><span class="p">:</span><span class="n">j</span><span class="p">],</span>
+        <span class="s1">&#39;page&#39;</span><span class="p">:</span> <span class="n">pageObj</span><span class="p">(</span><span class="n">page</span><span class="o">=</span><span class="n">page</span><span class="p">,</span> <span class="n">first</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">last</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">genome</span><span class="o">.</span><span class="n">fullSequence</span><span class="p">)</span> <span class="o">//</span> <span class="mi">10000</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span>
+        <span class="p">}</span>
+
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;bacterial_genome_annotation/genome.html&#39;</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="SignUpView"><a class="viewcode-back" href="../../bacterial_genome_annotation.html#bacterial_genome_annotation.views.SignUpView">[docs]</a><span class="k">class</span> <span class="nc">SignUpView</span><span class="p">(</span><span class="n">generic</span><span class="o">.</span><span class="n">CreateView</span><span class="p">):</span>
+    <span class="n">template_name</span> <span class="o">=</span> <span class="s1">&#39;bacterial_genome_annotation/signup.html&#39;</span>
+    <span class="n">form_class</span> <span class="o">=</span> <span class="n">UserCreationForm</span>
+    <span class="n">success_url</span> <span class="o">=</span> <span class="n">reverse_lazy</span><span class="p">(</span><span class="s1">&#39;home&#39;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="SignUpView.form_valid"><a class="viewcode-back" href="../../bacterial_genome_annotation.html#bacterial_genome_annotation.views.SignUpView.form_valid">[docs]</a>    <span class="k">def</span> <span class="nf">form_valid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">form</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The form_valid function is called when the form is valid.</span>
+<span class="sd">        It should return an HttpResponse.</span>
+<span class="sd">        If it returns None, then a redirect will be issued automatically; this does not happen in our case.</span>
+
+<span class="sd">        :param self: Access the attributes and methods of the class in python</span>
+<span class="sd">        :param form: Create a new user</span>
+<span class="sd">        :return: The result of calling the form_valid method on the parent class</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">valid</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">form_valid</span><span class="p">(</span><span class="n">form</span><span class="p">)</span>
+        <span class="n">login</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">object</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">valid</span></div></div>
+
+
+<div class="viewcode-block" id="LoginView"><a class="viewcode-back" href="../../bacterial_genome_annotation.html#bacterial_genome_annotation.views.LoginView">[docs]</a><span class="k">class</span> <span class="nc">LoginView</span><span class="p">(</span><span class="n">auth_views</span><span class="o">.</span><span class="n">LoginView</span><span class="p">):</span>
+    <span class="n">template_name</span> <span class="o">=</span> <span class="s1">&#39;registration/login.html&#39;</span>
+
+<div class="viewcode-block" id="LoginView.get_success_url"><a class="viewcode-back" href="../../bacterial_genome_annotation.html#bacterial_genome_annotation.views.LoginView.get_success_url">[docs]</a>    <span class="k">def</span> <span class="nf">get_success_url</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The get_success_url function is used to redirect the user back to the page they were on before making a change. </span>
+<span class="sd">        It&#39;s important that this function returns a URL, not an HttpResponse object. The reverse() function will be</span>
+<span class="sd">        called on whatever string is returned.</span>
+<span class="sd">        </span>
+<span class="sd">        :param self: Access the attributes and methods of the class</span>
+<span class="sd">        :return: The url to redirect to after a successful submission</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">list</span><span class="p">(</span><span class="n">messages</span><span class="o">.</span><span class="n">get_messages</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="p">))</span>
+        <span class="k">if</span> <span class="s1">&#39;next&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="p">[</span><span class="s1">&#39;next&#39;</span><span class="p">]</span>
+        <span class="k">return</span> <span class="s1">&#39;/&#39;</span></div>
+
+<div class="viewcode-block" id="LoginView.get_initial"><a class="viewcode-back" href="../../bacterial_genome_annotation.html#bacterial_genome_annotation.views.LoginView.get_initial">[docs]</a>    <span class="k">def</span> <span class="nf">get_initial</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The get_initial function is used to populate the initial data of a form. </span>
+<span class="sd">        It takes in self as an argument, and returns a dictionary that will be passed into the form&#39;s __init__</span>
+<span class="sd">        function.</span>
+<span class="sd">        This allows us to pass in some information from outside our model into our form.</span>
+<span class="sd">        </span>
+<span class="sd">        :param self: Access the attributes and methods of the class in python</span>
+<span class="sd">        :return: The initial data of the form</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="s1">&#39;next&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">is_authenticated</span><span class="p">:</span>
+                <span class="n">messages</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="p">,</span>
+                                 <span class="s1">&#39;You don</span><span class="se">\&#39;</span><span class="s1">t have the authorization to do that !.&#39;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">messages</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="p">,</span>
+                                 <span class="s1">&#39;You must be connected to do that !.&#39;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">initial</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span></div></div>
+
+
+<div class="viewcode-block" id="LogoutView"><a class="viewcode-back" href="../../bacterial_genome_annotation.html#bacterial_genome_annotation.views.LogoutView">[docs]</a><span class="k">class</span> <span class="nc">LogoutView</span><span class="p">(</span><span class="n">auth_views</span><span class="o">.</span><span class="n">LogoutView</span><span class="p">):</span>
+    <span class="n">template_name</span> <span class="o">=</span> <span class="s1">&#39;accounts/logout.html&#39;</span></div>
+
+
+<div class="viewcode-block" id="validate_email"><a class="viewcode-back" href="../../bacterial_genome_annotation.html#bacterial_genome_annotation.views.validate_email">[docs]</a><span class="k">def</span> <span class="nf">validate_email</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">HttpRequest</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The validate_email function checks if the email is empty, taken or valid.</span>
+<span class="sd">    If it is empty, it returns true for the first condition. If it is taken, </span>
+<span class="sd">    it returns true for the second condition. If not then false will be returned.</span>
+<span class="sd">    </span>
+<span class="sd">    :param request: HttpRequest: Get the data from the form</span>
+<span class="sd">    :return: A jsonresponse object</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">email</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;email&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;is_empty&#39;</span><span class="p">:</span> <span class="n">email</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;is_taken&#39;</span><span class="p">:</span> <span class="n">User</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">email__iexact</span><span class="o">=</span><span class="n">email</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">(),</span>
+        <span class="s1">&#39;is_valid&#39;</span><span class="p">:</span> <span class="nb">bool</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;([A-Za-z0-9]+[.-_])*[A-Za-z0-9]+@[A-Za-z0-9-]+(\.[A-Z|a-z]{2,})+&#39;</span><span class="p">,</span> <span class="n">email</span><span class="p">))</span>
+        <span class="p">}</span>
+    <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">(</span><span class="n">response</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="validate_password"><a class="viewcode-back" href="../../bacterial_genome_annotation.html#bacterial_genome_annotation.views.validate_password">[docs]</a><span class="k">def</span> <span class="nf">validate_password</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">HttpRequest</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The validate_password function is used to validate the password entered by the user. </span>
+<span class="sd">    It uses django&#39;s built in validator v_p to check if the password is strong enough. </span>
+<span class="sd">    If it isn&#39;t, then a ValidationError will be raised and an appropriate message will be returned.</span>
+<span class="sd">    </span>
+<span class="sd">    :param request: HttpRequest: Get the post data from the frontend</span>
+<span class="sd">    :return: A json response with the following keys:</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">password</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;password1&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">v_p</span><span class="p">(</span><span class="n">password</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s1">&#39;is_valid&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s1">&#39;message&#39;</span><span class="p">:</span> <span class="s1">&#39;Password is valid&#39;</span><span class="p">,</span> <span class="s1">&#39;is_empty&#39;</span><span class="p">:</span> <span class="n">password</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span><span class="p">})</span>
+    <span class="k">except</span> <span class="n">ValidationError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s1">&#39;is_valid&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;message&#39;</span><span class="p">:</span> <span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">messages</span><span class="p">),</span> <span class="s1">&#39;is_empty&#39;</span><span class="p">:</span> <span class="n">password</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span><span class="p">})</span></div>
+
+
+<div class="viewcode-block" id="contact"><a class="viewcode-back" href="../../bacterial_genome_annotation.html#bacterial_genome_annotation.views.contact">[docs]</a><span class="k">def</span> <span class="nf">contact</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The contact function is used to send an email from the contact page. It takes a request and returns a redirect to</span>
+<span class="sd">    the contact page.</span>
+<span class="sd">    </span>
+<span class="sd">    :param request: Get the data from the form</span>
+<span class="sd">    :return: A render of the contact</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s1">&#39;POST&#39;</span><span class="p">:</span>
+        <span class="n">form</span> <span class="o">=</span> <span class="n">ContactForm</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">form</span><span class="o">.</span><span class="n">is_valid</span><span class="p">():</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">form</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span>
+            <span class="n">email</span> <span class="o">=</span> <span class="n">form</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s1">&#39;email&#39;</span><span class="p">]</span>
+            <span class="n">content</span> <span class="o">=</span> <span class="n">form</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s1">&#39;content&#39;</span><span class="p">]</span>
+
+            <span class="n">html</span> <span class="o">=</span> <span class="n">render_to_string</span><span class="p">(</span><span class="s1">&#39;bacterial_genome_annotation/contactForm.html&#39;</span><span class="p">,</span> <span class="p">{</span>
+                <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="n">name</span><span class="p">,</span>
+                <span class="s1">&#39;email&#39;</span><span class="p">:</span> <span class="n">email</span><span class="p">,</span>
+                <span class="s1">&#39;content&#39;</span><span class="p">:</span> <span class="n">content</span>
+                <span class="p">})</span>
+
+            <span class="n">send_mail</span><span class="p">(</span><span class="s1">&#39;The contact form subject&#39;</span><span class="p">,</span> <span class="s1">&#39;This is the message&#39;</span><span class="p">,</span>
+                      <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;codewithtestein@gmail.com&#39;</span><span class="p">],</span> <span class="n">html_message</span><span class="o">=</span><span class="n">html</span><span class="p">)</span>
+
+            <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="s1">&#39;contact&#39;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">form</span> <span class="o">=</span> <span class="n">ContactForm</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;bacterial_genome_annotation/contact.html&#39;</span><span class="p">,</span> <span class="p">{</span>
+        <span class="s1">&#39;form&#39;</span><span class="p">:</span> <span class="n">form</span>
+        <span class="p">})</span></div>
+
+
+<div class="viewcode-block" id="AboutUs"><a class="viewcode-back" href="../../bacterial_genome_annotation.html#bacterial_genome_annotation.views.AboutUs">[docs]</a><span class="k">def</span> <span class="nf">AboutUs</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">HttpRequest</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The AboutUs function shows the About Us view</span>
+
+<span class="sd">    :param request:HttpRequest: The request</span>
+<span class="sd">    :return: The About Us view</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s1">&#39;bacterial_genome_annotation/AboutUs.html&#39;</span><span class="p">)</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, LADN.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
